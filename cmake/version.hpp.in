@@ -1,0 +1,13 @@
+#ifndef RUDE_VERSION_HPP
+#define RUDE_VERSION_HPP
+
+#include <string_view>
+
+namespace rude {
+   constexpr std::string_view kVersion = "@PROJECT_VERSION@";
+   constexpr int kVersionMajor = @PROJECT_VERSION_MAJOR@;
+   constexpr int kVersionMinor = @PROJECT_VERSION_MINOR@;
+   constexpr int kVersionPatch = @PROJECT_VERSION_PATCH@;
+} // namespace rude
+
+#endif // RUDE_VERSION_HPP

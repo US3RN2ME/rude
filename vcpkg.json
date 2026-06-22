@@ -1,0 +1,18 @@
+{
+  "$schema": "https://raw.githubusercontent.com/microsoft/vcpkg-tool/main/docs/vcpkg.schema.json",
+  "name": "rude",
+  "version": "0.1.0",
+  "description": "Reliable UDP Engine",
+  "license": "MIT",
+  "dependencies": [
+    "boost-asio"
+  ],
+  "features": {
+    "tests": {
+      "description": "Build Tests",
+      "dependencies": [
+        "bext-ut"
+      ]
+    }
+  }
+}

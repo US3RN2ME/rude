@@ -1,0 +1,39 @@
+# Build outputs
+build/
+cmake-build-*/
+CMakeFiles/
+CMakeCache.txt
+Makefile
+compile_commands.json
+cmake_install.cmake
+Testing/
+CTestTestfile.cmake
+*.cmake
+
+# IDE/editor files
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
+
+# Compiler / linker outputs
+*.o
+*.obj
+*.a
+*.lib
+*.so
+*.dylib
+*.dll
+*.exe
+*.out
+*.pdb
+
+# Generated / temporary files
+*.log
+*.tmp
+*.bak
+
+# Platform-specific
+.DS_Store
+Thumbs.db
