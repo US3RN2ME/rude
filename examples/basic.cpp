@@ -1,3 +1,4 @@
+#include <boost/asio.hpp>
 #include <iostream>
 #include <rude/rude.hpp>
 

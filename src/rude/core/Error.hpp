@@ -1,0 +1,5 @@
+
+#ifndef RUDE_CORE_ERROR_HPP
+#define RUDE_CORE_ERROR_HPP
+
+#endif // RUDE_CORE_ERROR_HPP
