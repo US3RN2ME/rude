@@ -1,5 +1,5 @@
 option(BOOST_UT_ENABLE_RUN_AFTER_BUILD
-       "Automatically run built artifacts. If disabled, the tests can be run with ctest instead" ON)
+       "Automatically run built artifacts. If disabled, the tests can be run with ctest instead" OFF)
 
 function(ut_add_custom_command_or_test)
    set(prefix "PARSE")
