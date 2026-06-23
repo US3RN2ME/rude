@@ -1,0 +1,151 @@
+#ifndef RUDE_DETAIL_CHANNEL_CHANNELCOMMON_HPP
+#define RUDE_DETAIL_CHANNEL_CHANNELCOMMON_HPP
+
+#include <algorithm>
+#include <boost/asio/buffer.hpp>
+#include <boost/asio/ip/udp.hpp>
+#include <cstddef>
+#include <cstdint>
+#include <cstring>
+#include <deque>
+#include <functional>
+#include <memory>
+#include <optional>
+#include <rude/core/Error.hpp>
+#include <rude/protocol/Packet.hpp>
+#include <span>
+#include <system_error>
+#include <utility>
+#include <vector>
+
+namespace rude::detail::channel {
+   using RecvHandler = std::function<void(std::error_code, std::size_t)>;
+
+   struct PendingRecv {
+      boost::asio::mutable_buffer buf;
+      RecvHandler handler;
+   };
+
+   struct ReceivedMessage {
+      std::vector<std::byte> payload;
+   };
+
+   inline void completeRecv(PendingRecv& pendingRecv, ReceivedMessage const& message) {
+      const auto size = std::min(message.payload.size(), pendingRecv.buf.size());
+      std::memcpy(pendingRecv.buf.data(), message.payload.data(), size);
+      pendingRecv.handler({}, size);
+   }
+
+   inline void deliverOrQueue(std::deque<ReceivedMessage>& queuedMessages, std::optional<PendingRecv>& pendingRecv,
+                              std::span<std::byte const> payload) {
+      ReceivedMessage message;
+      message.payload.assign(payload.begin(), payload.end());
+
+      if (!pendingRecv) {
+         queuedMessages.push_back(std::move(message));
+         return;
+      }
+
+      auto recv = std::exchange(pendingRecv, std::nullopt);
+      completeRecv(*recv, message);
+   }
+
+   inline void asyncRecv(std::deque<ReceivedMessage>& queuedMessages, std::optional<PendingRecv>& pendingRecv,
+                         boost::asio::mutable_buffer buf, RecvHandler handler) {
+      if (!queuedMessages.empty()) {
+         auto message = std::move(queuedMessages.front());
+         queuedMessages.pop_front();
+         PendingRecv recv{buf, std::move(handler)};
+         completeRecv(recv, message);
+         return;
+      }
+
+      if (pendingRecv) {
+         handler(makeErrorCode(Error::ChannelClosed), 0);
+         return;
+      }
+
+      pendingRecv = PendingRecv{buf, std::move(handler)};
+   }
+
+   inline bool isNewerSequence(std::uint16_t sequenceNumber, std::uint16_t previousSequenceNumber) noexcept {
+      const auto delta = static_cast<std::uint16_t>(sequenceNumber - previousSequenceNumber);
+      return delta != 0 && delta < 32768U;
+   }
+
+   inline bool isStaleOrDuplicate(std::uint16_t sequenceNumber, std::uint16_t previousSequenceNumber) noexcept {
+      return !isNewerSequence(sequenceNumber, previousSequenceNumber);
+   }
+
+   class ReceiveAckTracker {
+   public:
+      void markReceived(std::uint16_t sequenceNumber) noexcept {
+         if (!hasReceived_) {
+            hasReceived_ = true;
+            latestSequence_ = sequenceNumber;
+            ackBits_ = 0;
+            return;
+         }
+
+         const auto forwardDelta = static_cast<std::uint16_t>(sequenceNumber - latestSequence_);
+         if (forwardDelta == 0) {
+            return;
+         }
+
+         if (forwardDelta < 32768U) {
+            if (forwardDelta <= 32U) {
+               ackBits_ = (ackBits_ << forwardDelta) | (1U << (forwardDelta - 1U));
+            } else {
+               ackBits_ = 0;
+            }
+            latestSequence_ = sequenceNumber;
+            return;
+         }
+
+         const auto backDelta = static_cast<std::uint16_t>(latestSequence_ - sequenceNumber);
+         if (backDelta >= 1U && backDelta <= 32U) {
+            ackBits_ |= 1U << (backDelta - 1U);
+         }
+      }
+
+      [[nodiscard]] bool hasReceived() const noexcept {
+         return hasReceived_;
+      }
+      [[nodiscard]] std::uint16_t latestSequence() const noexcept {
+         return latestSequence_;
+      }
+      [[nodiscard]] std::uint32_t ackBits() const noexcept {
+         return ackBits_;
+      }
+
+   private:
+      bool hasReceived_ = false;
+      std::uint16_t latestSequence_ = 0;
+      std::uint32_t ackBits_ = 0;
+   };
+
+   inline bool isAcknowledged(std::uint16_t sequenceNumber, std::uint16_t ack, std::uint32_t ackBits) noexcept {
+      if (sequenceNumber == ack) {
+         return true;
+      }
+
+      const auto backDelta = static_cast<std::uint16_t>(ack - sequenceNumber);
+      if (backDelta == 0 || backDelta > 32U || backDelta >= 32768U) {
+         return false;
+      }
+
+      return (ackBits & (1U << (backDelta - 1U))) != 0;
+   }
+
+   template <typename Sock>
+   void sendEncoded(Sock& sock, boost::asio::ip::udp::endpoint const& remoteEndpoint, std::vector<std::byte> encodedPacket,
+                    std::function<void(std::error_code)> handler) {
+      auto buffer = std::make_shared<std::vector<std::byte>>(std::move(encodedPacket));
+      sock.asyncSendTo(boost::asio::buffer(*buffer), remoteEndpoint,
+                       [buffer, handler = std::move(handler)](std::error_code ec, std::size_t) mutable {
+                          handler(ec);
+                       });
+   }
+} // namespace rude::detail::channel
+
+#endif // RUDE_DETAIL_CHANNEL_CHANNELCOMMON_HPP
