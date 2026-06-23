@@ -11,11 +11,11 @@
 #include <rude/concepts/SessionPolicy.hpp>
 #include <rude/concepts/Socket.hpp>
 #include <rude/core/Executor.hpp>
-#include <rude/detail/channel/ChannelVariant.hpp>
 #include <rude/detail/DefaultCodec.hpp>
 #include <rude/detail/RecvLoop.hpp>
 #include <rude/detail/SendGuard.hpp>
 #include <rude/detail/UdpSocket.hpp>
+#include <rude/detail/channel/ChannelVariant.hpp>
 #include <rude/detail/congestion/LeakyBucket.hpp>
 #include <rude/session/ChannelConfig.hpp>
 #include <rude/session/SessionConfig.hpp>

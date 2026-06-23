@@ -93,7 +93,8 @@ namespace rude::detail {
             it->second.onRetx(it->second.pkt);
             // Double the timeout (binary exponential backoff, cap at 8×).
             auto& e = it->second;
-            auto timeout = std::chrono::duration_cast<std::chrono::milliseconds>(e.deadline - (now - std::chrono::milliseconds{200}));
+            auto timeout =
+                std::chrono::duration_cast<std::chrono::milliseconds>(e.deadline - (now - std::chrono::milliseconds{200}));
             timeout = std::min(timeout * 2, std::chrono::milliseconds{1600});
             e.deadline = now + timeout;
          }
