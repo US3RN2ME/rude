@@ -10,19 +10,20 @@
 
 namespace rude {
 
-   /// Simplified BBR-inspired congestion controller.
-   ///
-   /// Maintains estimates of bottleneck bandwidth (btlBw_) and minimum RTT (rtProp_)
-   /// to derive a send window that keeps the pipe full without building a queue.
-   ///
-   /// Phase cycle (simplified):
-   ///   startup   — exponential window growth until BDP is found
-   ///   drain     — one RTT at reduced rate to drain any queue built in startup
-   ///   probeBw   — steady state: probe for extra bandwidth once per 8 RTTs
-   ///   probeRtt  — briefly shrink window to refresh rtProp_ estimate
-   ///
-   /// Prefer over LeakyBucketCC on WAN links, mobile networks, or when
-   /// cross-traffic from other applications is expected.
+   /**
+    * @brief Simplified BBR-inspired congestion controller.
+    *
+    * BbrLite estimates bottleneck bandwidth and
+    * minimum RTT to derive a send
+    * window that keeps the path full without intentionally building a queue.
+    * It is
+    * intended for WAN links, mobile networks, and paths with competing
+    * cross-traffic.
+    *
+    * The implementation
+    * cycles through startup, drain, bandwidth probing, and
+    * RTT probing phases.
+    */
    class BbrLite {
       using Clock = std::chrono::steady_clock;
       using Micros = std::chrono::microseconds;

@@ -14,7 +14,7 @@
 namespace {
    suite<"[UnreliableChannel]"> _ = [] {
       "[SendsEncodedPacketAndDropsStaleReceive]"_test = [] {
-         rude::ChannelConfig cfg;
+         rude::UnreliableChannelConfig cfg;
          cfg.id_ = 2;
          rude::UnreliableChannel channel{cfg};
          rude::test::MockSocket socket;

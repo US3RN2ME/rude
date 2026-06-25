@@ -12,6 +12,18 @@
 
 namespace rude {
 
+   /**
+    * @brief Concept for packet codec implementations.
+    *
+    * A codec converts Packet values to byte buffers and
+    * decodes byte buffers
+    * back into Packet views. Decode failures are reported as rude::Error values
+    * through
+    * std::expected.
+    *
+    * @tparam T
+    * Candidate codec type.
+    */
    template <typename T>
    concept PacketCodec =
        requires(T codec, Packet const& pkt, boost::asio::mutable_buffer outBuf, boost::asio::const_buffer inBuf) {

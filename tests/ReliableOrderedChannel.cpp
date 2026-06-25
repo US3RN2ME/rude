@@ -15,7 +15,7 @@
 namespace {
    suite<"[ReliableOrderedChannel]"> _ = [] {
       "[ReordersBeforeDelivery]"_test = [] {
-         rude::ChannelConfig cfg;
+         rude::ReliableChannelConfig cfg;
          cfg.sendWindow_ = 4;
          int strand = 0;
          rude::ReliableOrderedChannel<rude::detail::Null> channel{cfg, strand};
@@ -47,7 +47,7 @@ namespace {
       };
 
       "[AckFreesSendWindow]"_test = [] {
-         rude::ChannelConfig cfg;
+         rude::ReliableChannelConfig cfg;
          cfg.sendWindow_ = 1;
          int strand = 0;
          rude::ReliableOrderedChannel<rude::detail::Null> channel{cfg, strand};

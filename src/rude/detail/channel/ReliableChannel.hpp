@@ -32,7 +32,7 @@ namespace rude::detail::channel {
       ReliableChannel() = default;
 
       template <typename Strand>
-      explicit ReliableChannel(ChannelConfig const& cfg, Strand&)
+      explicit ReliableChannel(ReliableChannelConfig const& cfg, Strand&)
           : id_{cfg.id_}
           , sendWindow_{normalizeWindow(cfg.sendWindow_)}
           , sentPackets_(windowCapacity(sendWindow_))

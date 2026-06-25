@@ -1,0 +1,32 @@
+/**
+ * @mainpage rude API Reference
+ *
+ * `rude` is a C++23 Reliable UDP Engine built on Boost.Asio. It provides
+ * packet encoding, reliable and unreliable channel primitives, congestion
+ * control policies, socket statistics, and a session abstraction.
+ *
+ * The stable API is centered on a small set of composable components:
+ *
+ * - @ref rude::DefaultCodec encodes and decodes the wire packet format.
+ * - @ref rude::ReliableOrderedChannel delivers reliable data in sequence.
+ * - @ref rude::ReliableUnorderedChannel delivers reliable data once without
+ *   enforcing receive order.
+ * - @ref rude::UnreliableChannel delivers only the newest sequenced data.
+ * - @ref rude::ChannelConfig describes session channel profiles.
+ * - @ref rude::SessionConfig describes session-level transport settings.
+ *
+ * Typical channel configuration:
+ *
+ * @code{.cpp}
+ * auto ordered = rude::ChannelConfig::reliableOrdered(0);
+ * ordered.sendWindow_ = 128;
+ *
+ * auto updates = rude::ChannelConfig::unreliableSequenced(1);
+ *
+ * rude::SessionConfig session;
+ * session.maxChannels_ = 2;
+ * @endcode
+ *
+ * Include @c rude/rude.hpp for the stable component/session surface, or include
+ * narrower headers when build time matters.
+ */

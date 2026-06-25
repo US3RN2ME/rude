@@ -13,7 +13,7 @@
 namespace {
    suite<"[ReliableUnorderedChannel]"> _ = [] {
       "[SuppressesDuplicateDelivery]"_test = [] {
-         rude::ChannelConfig cfg;
+         rude::ReliableChannelConfig cfg;
          cfg.sendWindow_ = 4;
          int strand = 0;
          rude::ReliableUnorderedChannel<rude::detail::Null> channel{cfg, strand};

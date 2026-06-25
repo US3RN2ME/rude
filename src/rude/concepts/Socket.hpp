@@ -10,6 +10,17 @@
 
 namespace rude {
 
+   /**
+    * @brief Concept for UDP-like asynchronous socket adapters.
+    *
+    * Socket implementations provide async
+    * send/receive operations compatible
+    * with the session transport loop and expose endpoint/cancel/close control.
+    *
+
+    * * @tparam T
+    * Candidate socket adapter type.
+    */
    template <typename T>
    concept Socket = requires(T sock, boost::asio::const_buffer sendBuf, boost::asio::mutable_buffer recvBuf,
                              boost::asio::ip::udp::endpoint ep) {

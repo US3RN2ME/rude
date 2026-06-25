@@ -1,0 +1,9 @@
+@PACKAGE_INIT@
+
+include(CMakeFindDependencyMacro)
+
+find_dependency(boost_asio CONFIG)
+
+include("${CMAKE_CURRENT_LIST_DIR}/rudeTargets.cmake")
+
+check_required_components(rude)

@@ -34,12 +34,12 @@ namespace {
 } // namespace
 
 int main() {
-   rude::ChannelConfig cfg;
-   cfg.sendWindow_ = 8;
+   rude::ReliableChannelConfig reliableCfg;
+   reliableCfg.sendWindow_ = 8;
    int strandPlaceholder = 0;
    rude::SocketStats stats;
 
-   rude::ReliableOrderedChannel<rude::detail::Null> ordered{cfg, strandPlaceholder};
+   rude::ReliableOrderedChannel<rude::detail::Null> ordered{reliableCfg, strandPlaceholder};
    auto first = bytes("first");
    auto second = bytes("second");
    std::array<std::byte, 32> orderedBuffer{};
@@ -51,9 +51,15 @@ int main() {
    ordered.onRecv(data(1, second), stats);
    ordered.onRecv(data(0, first), stats);
 
-   std::cout << "ordered delivery after out-of-order input: " << text(orderedBuffer.data(), orderedSize) << '\n';
+   std::cout << "reliable ordered delivers seq=0 first: " << text(orderedBuffer.data(), orderedSize) << '\n';
 
-   rude::ReliableUnorderedChannel<rude::detail::Null> unordered{cfg, strandPlaceholder};
+   orderedSize = 0;
+   ordered.asyncRecv(boost::asio::buffer(orderedBuffer), [&](std::error_code, std::size_t size) {
+      orderedSize = size;
+   });
+   std::cout << "reliable ordered then releases buffered seq=1: " << text(orderedBuffer.data(), orderedSize) << '\n';
+
+   rude::ReliableUnorderedChannel<rude::detail::Null> unordered{reliableCfg, strandPlaceholder};
    auto duplicate = bytes("duplicate");
    unordered.onRecv(data(10, duplicate), stats);
    unordered.onRecv(data(10, duplicate), stats);
@@ -64,10 +70,10 @@ int main() {
       unorderedSize = size;
    });
 
-   std::cout << "unordered duplicate-suppressed delivery: " << text(unorderedBuffer.data(), unorderedSize) << '\n';
+   std::cout << "reliable unordered suppresses duplicate seq=10: " << text(unorderedBuffer.data(), unorderedSize) << '\n';
 
-   cfg.reliability_ = rude::ReliabilityMode::Unreliable;
-   rude::UnreliableChannel unreliable{cfg};
+   rude::UnreliableChannelConfig realtimeCfg;
+   rude::UnreliableChannel unreliable{realtimeCfg};
    auto newest = bytes("newest");
    auto stale = bytes("stale");
    std::array<std::byte, 32> unreliableBuffer{};
@@ -79,5 +85,6 @@ int main() {
    unreliable.onRecv(data(20, newest), stats);
    unreliable.onRecv(data(19, stale), stats);
 
-   std::cout << "unreliable sequenced delivery: " << text(unreliableBuffer.data(), unreliableSize) << '\n';
+   std::cout << "unreliable sequenced drops stale seq=19 after seq=20: " << text(unreliableBuffer.data(), unreliableSize)
+             << '\n';
 }

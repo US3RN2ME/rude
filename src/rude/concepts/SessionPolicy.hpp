@@ -18,6 +18,15 @@ namespace rude {
       { policy.onChannelStalled(channelId) } noexcept -> std::same_as<void>;
    };
 
+   /**
+    * @brief No-op session lifecycle policy.
+    *
+    * Use this policy when the application does not need lifecycle
+    * callbacks.
+    * Custom policies can observe connection, disconnection, keepalive timeout,
+    * and channel-stall
+    * events.
+    */
    struct DefaultPolicy {
       void onConnected(SessionBase&) noexcept {}
       void onDisconnected(std::error_code) noexcept {}

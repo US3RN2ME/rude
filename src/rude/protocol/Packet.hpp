@@ -8,6 +8,15 @@
 
 namespace rude {
 
+   /**
+    * @brief Decoded protocol packet view.
+    *
+    * Packet payload is non-owning and points into the caller-provided
+    * decode
+    * buffer. Keep that buffer alive for as long as payload_ is inspected or
+    * passed to channel receive
+    * handlers.
+    */
    struct Packet {
       PacketType type_ = PacketType::Data;
       std::uint16_t seq_ = 0;

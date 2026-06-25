@@ -25,8 +25,15 @@
 
 namespace rude {
 
-   /// Non-template base class holding the erased interface that SessionPolicy
-   /// callbacks receive. Avoids circular template dependencies.
+   /**
+    * @brief Type-erased session interface exposed to session policies.
+    *
+    * Policy callbacks receive this base
+    * class so they can inspect endpoint
+    * identity, read statistics, or cancel a session without depending on the
+    *
+    * full BasicSession template instantiation.
+    */
    class SessionBase {
    public:
       virtual ~SessionBase() = default;
@@ -36,16 +43,33 @@ namespace rude {
       virtual void cancel() noexcept = 0;
    };
 
-   /// The central session type. Owns a strand, a socket, a codec, a policy,
-   /// and an array of channel variants. All async operations are dispatched
-   /// on strand_ so the session is safe to use from multiple threads.
-   ///
-   /// Template parameters:
-   ///   Codec      — satisfies PacketCodec    (wire format)
-   ///   OrderedCC  — satisfies CongestionCtrl (used by ReliableOrderedChannel)
-   ///   UnorderedCC— satisfies CongestionCtrl (used by ReliableUnorderedChannel)
-   ///   Policy     — satisfies SessionPolicy  (lifecycle callbacks)
-   ///   Sock       — satisfies Socket         (UDP transport, swappable for tests)
+   /**
+    * @brief Owns transport, codec, policy, and per-channel state for one peer.
+    *
+    * All asynchronous operations
+    * are dispatched through the session strand, so
+    * callers may initiate operations from multiple threads while channel
+    * state
+    * remains serialized internally.
+    *
+    * @tparam Codec
+    * Packet codec satisfying PacketCodec.
+    *
+
+    * * @tparam OrderedCC
+    * Congestion controller used by reliable ordered channels.
+    *
+    * @tparam UnorderedCC
+    *
+    * Congestion controller used by reliable unordered channels.
+    *
+    * @tparam Policy
+    * Lifecycle callback policy
+    * satisfying SessionPolicy.
+    *
+    * @tparam Sock
+    * UDP-like transport satisfying Socket.
+    */
    template <PacketCodec Codec, CongestionCtrl OrderedCC, CongestionCtrl UnorderedCC, SessionPolicy Policy, Socket Sock>
    class BasicSession : public SessionBase {
    public:
@@ -176,15 +200,15 @@ namespace rude {
          }
 
          auto& slot = channels_[cfg.id_];
-         switch (cfg.reliability_) {
-            case ReliabilityMode::Reliable:
-               if (cfg.ordering_ == OrderingMode::Ordered)
-                  slot = ReliableOrderedChannel<OrderedCC>{cfg, strand_};
-               else
-                  slot = ReliableUnorderedChannel<UnorderedCC>{cfg, strand_};
+         switch (cfg.mode_) {
+            case ChannelMode::ReliableOrdered:
+               slot = ReliableOrderedChannel<OrderedCC>{cfg.reliableOptions(), strand_};
                break;
-            case ReliabilityMode::Unreliable:
-               slot = UnreliableChannel{cfg};
+            case ChannelMode::ReliableUnordered:
+               slot = ReliableUnorderedChannel<UnorderedCC>{cfg.reliableOptions(), strand_};
+               break;
+            case ChannelMode::UnreliableSequenced:
+               slot = UnreliableChannel{cfg.unreliableOptions()};
                break;
          }
       }
