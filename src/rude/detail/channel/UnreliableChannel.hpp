@@ -21,10 +21,13 @@
 
 namespace rude {
 
-   /// Fire-and-forget channel with sequenced delivery.
-   ///
-   /// Send path never buffers or retransmits. Receive path drops stale sequence
-   /// numbers and keeps only packets newer than the last delivered packet.
+   /**
+    * @brief Fire-and-forget channel with sequenced delivery.
+    *
+    * The send path never buffers or retransmits. The receive path drops stale
+    * sequence numbers and delivers only packets newer than the last delivered
+    * packet.
+    */
    class UnreliableChannel {
    public:
       using RecvHandler = detail::channel::RecvHandler;

@@ -9,8 +9,14 @@
 
 namespace rude::detail {
 
-   /// No-op CongestionCtrl baked into UnreliableChannel.
-   /// All packets are always permitted; there is no pacing and no RTT tracking.
+   /**
+    * @brief No-op congestion controller.
+    *
+    * All packets are always permitted. There is no pacing, RTT tracking,
+    * or
+    * loss response. This is useful for tests and for paths that already have
+    * external rate limiting.
+    */
    struct Null {
       constexpr void onAck(std::uint16_t, std::uint64_t) noexcept {}
       constexpr void onLoss(std::uint16_t) noexcept {}

@@ -9,14 +9,19 @@
 
 namespace rude {
 
-   /// Token-bucket congestion controller — a solid default for stable LAN connections.
-   ///
-   /// Maintains a bucket of tokens that refills at rate_ tokens/second.
-   /// Each packet send costs one token; if the bucket is empty, pacingDelay()
-   /// returns the time until the next token arrives.
-   ///
-   /// On loss (retransmit timeout): halves the drain rate (multiplicative decrease).
-   /// On ACK:                       gradually refills towards the configured peak rate.
+   /**
+    * @brief Token-bucket congestion controller.
+    *
+    * The controller maintains a bucket of tokens that refills at
+    * a configured
+    * packet rate. Each packet costs one token. If the bucket is empty,
+    * pacingDelay() returns the delay
+    * until another token is available.
+    *
+    * ACKs gradually recover toward the configured peak rate. Losses apply a
+    *
+    * multiplicative decrease to reduce pressure on the path.
+    */
    class LeakyBucket {
       using Clock = std::chrono::steady_clock;
 

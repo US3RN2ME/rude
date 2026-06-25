@@ -7,8 +7,16 @@
 
 namespace rude {
 
-   /// Configuration for a Session. Pass to withConfig() on Acceptor or Connector
-   /// before initiating the connection. All fields have sensible defaults.
+   /**
+    * @brief Session-level transport configuration.
+    *
+    * The values control global session behavior such as MTU,
+    * keepalive cadence,
+    * handshake timeout, and the maximum number of channel ids the session will
+    * accept. All
+    * fields have conservative defaults suitable for component tests
+    * and local development.
+    */
    struct SessionConfig {
       /// Maximum transmission unit for the underlying network path (bytes).
       /// Payloads larger than mtu_ - codec overhead are fragmented by the caller.

@@ -15,18 +15,26 @@
 
 namespace rude {
 
-   /// Wire layout (all fields little-endian):
-   ///   Offset  Size  Field
-   ///   0       1     type_    (PacketType)
-   ///   1       2     seq_
-   ///   3       2     ack_
-   ///   5       4     ackBits_
-   ///   9       1     channel_
-   ///   ---- 10 bytes header ----
-   ///   10      N     payload
-   ///   10+N    4     crc32 (xxHash-inspired; covers bytes 0..10+N-1)
-   ///
-   /// Total overhead = 14 bytes. maxOverhead() returns 14.
+   /**
+    * @brief Default binary packet codec.
+    *
+    * The codec uses a compact little-endian frame with a 10-byte
+    * header,
+    * variable-size payload, and 4-byte checksum. Decode returns Packet views
+    * whose payload spans the
+    * supplied input buffer.
+    *
+    * Wire layout:
+    * - byte 0: packet type
+    * - bytes 1-2: sequence number
+    * -
+    * bytes 3-4: latest acknowledged sequence
+    * - bytes 5-8: ACK bitfield
+    * - byte 9: channel id
+    * - bytes 10..N:
+    * payload
+    * - final 4 bytes: checksum
+    */
    class DefaultCodec {
    public:
       static constexpr std::size_t kHeaderSize = 10;

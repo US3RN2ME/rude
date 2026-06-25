@@ -8,8 +8,15 @@
 
 namespace rude {
 
-   /// Live per-session counters. All fields are atomics so they can be read from
-   /// any thread without locking. Call snapshot() for a consistent non-atomic copy.
+   /**
+    * @brief Live per-session transport counters.
+    *
+    * Counters are atomic so metrics can be sampled from any
+    * thread without
+    * taking the session strand. Use snapshot() to collect a non-atomic copy for
+    * logging, telemetry
+    * export, or diagnostics.
+    */
    struct SocketStats {
       std::atomic<std::uint64_t> bytesSent_{0};
       std::atomic<std::uint64_t> bytesRecv_{0};
@@ -20,8 +27,13 @@ namespace rude {
       std::atomic<double> jitterUs_{0.0};
       std::atomic<std::size_t> sendWindowUsed_{0}; ///< Packets currently in-flight
 
-      /// Returns a non-atomic copy. Not perfectly consistent across fields
-      /// but sufficient for diagnostics and metrics export.
+      /**
+       * @brief Non-atomic copy of SocketStats counters.
+       *
+       * The fields are sampled independently and
+       * therefore are not guaranteed
+       * to describe one exact instant under concurrent traffic.
+       */
       struct Snapshot {
          std::uint64_t bytesSent;
          std::uint64_t bytesRecv;
@@ -33,6 +45,12 @@ namespace rude {
          std::size_t sendWindowUsed;
       };
 
+      /**
+       * @brief Samples all counters into a plain value object.
+       *
+       * @return Current best-effort counter
+       * snapshot.
+       */
       [[nodiscard]] Snapshot snapshot() const noexcept {
          return {
              bytesSent_.load(std::memory_order_relaxed),   bytesRecv_.load(std::memory_order_relaxed),

@@ -8,6 +8,15 @@
 
 namespace rude {
 
+   /**
+    * @brief Protocol frame discriminator.
+    *
+    * PacketType identifies how the session or channel should interpret
+    * a
+    * decoded packet. Data and Ack packets are channel-scoped; handshake,
+    * keepalive, and disconnect packets are
+    * session-scoped.
+    */
    enum class PacketType : std::uint8_t {
       HandshakeInit = 0x01, ///< Client → Server: open connection
       HandshakeAck = 0x02,  ///< Server → Client: confirm + echo nonce

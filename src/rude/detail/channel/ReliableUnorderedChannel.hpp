@@ -5,6 +5,16 @@
 
 namespace rude {
 
+   /**
+    * @brief Reliable channel that suppresses duplicates without ordering.
+    *
+    * Packets are retransmitted until acknowledged, but the receive side
+    * delivers each sequence number as soon as it arrives instead of waiting for
+    * lower sequence numbers.
+    *
+    * @tparam CongestionController
+    * Congestion controller used to size the reliable send window.
+    */
    template <typename CongestionController>
    class ReliableUnorderedChannel : public detail::channel::ReliableChannel<CongestionController, false> {
    public:
