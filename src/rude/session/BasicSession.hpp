@@ -176,15 +176,15 @@ namespace rude {
          }
 
          auto& slot = channels_[cfg.id_];
-         switch (cfg.reliability_) {
-            case ReliabilityMode::Reliable:
-               if (cfg.ordering_ == OrderingMode::Ordered)
-                  slot = ReliableOrderedChannel<OrderedCC>{cfg, strand_};
-               else
-                  slot = ReliableUnorderedChannel<UnorderedCC>{cfg, strand_};
+         switch (cfg.mode_) {
+            case ChannelMode::ReliableOrdered:
+               slot = ReliableOrderedChannel<OrderedCC>{cfg.reliableOptions(), strand_};
                break;
-            case ReliabilityMode::Unreliable:
-               slot = UnreliableChannel{cfg};
+            case ChannelMode::ReliableUnordered:
+               slot = ReliableUnorderedChannel<UnorderedCC>{cfg.reliableOptions(), strand_};
+               break;
+            case ChannelMode::UnreliableSequenced:
+               slot = UnreliableChannel{cfg.unreliableOptions()};
                break;
          }
       }

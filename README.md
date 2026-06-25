@@ -148,6 +148,20 @@ Channel types model delivery semantics:
 - `ReliableUnorderedChannel`: delivers once, suppresses duplicate reliable packets.
 - `UnreliableChannel`: delivers only newer sequenced packets.
 
+Concrete channel types do not accept a reliability mode. Their type already
+defines the delivery contract:
+
+```cpp
+rude::ReliableChannelConfig reliable;
+reliable.sendWindow_ = 128;
+
+int strand = 0;
+rude::ReliableOrderedChannel<rude::detail::Null> ordered{reliable, strand};
+
+rude::UnreliableChannelConfig realtime;
+rude::UnreliableChannel unreliable{realtime};
+```
+
 ### Congestion Control
 
 Congestion policies satisfy `CongestionCtrl`:
@@ -161,13 +175,21 @@ Congestion policies satisfy `CongestionCtrl`:
 `SessionConfig` controls global session behavior such as MTU, keepalive, timeout,
 and maximum channels.
 
-`ChannelConfig` controls per-channel behavior:
+`ChannelConfig` is the session-facing profile used by `Session::setChannel`.
+Use the named constructors instead of combining reliability and ordering flags:
 
-- reliability mode
-- ordering mode
-- send window
-- retransmit timeout
-- priority
+```cpp
+auto ordered = rude::ChannelConfig::reliableOrdered(0);
+ordered.sendWindow_ = 128;
+
+auto unordered = rude::ChannelConfig::reliableUnordered(1);
+unordered.sendWindow_ = 256;
+
+auto realtime = rude::ChannelConfig::unreliableSequenced(2);
+```
+
+Reliable profiles use `sendWindow_` and `retxTimeoutMs_`; unreliable sequenced
+profiles ignore reliable-only tuning. All profiles carry `id_` and `priority_`.
 
 ## Project Layout
 
@@ -184,7 +206,6 @@ and maximum channels.
 
 ## Known Limitations
 
-- `rude/rude.hpp` is currently only a placeholder umbrella header.
 - Endpoint include paths currently contain case-sensitive inconsistencies on non-Windows filesystems.
 - Full connector/acceptor examples are intentionally not provided yet because that lifecycle needs further hardening.
 - The build may emit a Boost.Asio `_WIN32_WINNT` warning on Windows unless the target Windows version is defined by the consumer.

@@ -29,7 +29,7 @@ namespace rude {
    public:
       using RecvHandler = detail::channel::RecvHandler;
 
-      explicit UnreliableChannel(ChannelConfig const& cfg) noexcept
+      explicit UnreliableChannel(UnreliableChannelConfig const& cfg) noexcept
           : id_{cfg.id_} {}
 
       UnreliableChannel() = default;
