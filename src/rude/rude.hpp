@@ -16,5 +16,6 @@
 #include <rude/session/ChannelConfig.hpp>
 #include <rude/session/SessionConfig.hpp>
 #include <rude/session/SocketStats.hpp>
+#include <rude/version.hpp>
 
 #endif // RUDE_HPP

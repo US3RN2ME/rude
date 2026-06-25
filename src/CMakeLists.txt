@@ -13,5 +13,5 @@ target_compile_features(rude INTERFACE cxx_std_23)
 target_link_libraries(rude INTERFACE Boost::asio)
 
 target_include_directories(
-   rude INTERFACE $<BUILD_INTERFACE:${CMAKE_SOURCE_DIR}/src> $<BUILD_INTERFACE:${PROJECT_BINARY_DIR}/src>
+   rude INTERFACE $<BUILD_INTERFACE:${PROJECT_SOURCE_DIR}/src> $<BUILD_INTERFACE:${PROJECT_BINARY_DIR}/include>
                   $<INSTALL_INTERFACE:${CMAKE_INSTALL_INCLUDEDIR}>)
