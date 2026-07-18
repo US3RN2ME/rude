@@ -4,6 +4,7 @@
 #include <algorithm>
 #include <boost/asio/buffer.hpp>
 #include <boost/asio/ip/udp.hpp>
+#include <boost/system/error_code.hpp>
 #include <cstddef>
 #include <cstdint>
 #include <cstring>
@@ -14,12 +15,13 @@
 #include <rude/core/Error.hpp>
 #include <rude/protocol/Packet.hpp>
 #include <span>
-#include <system_error>
 #include <utility>
 #include <vector>
 
 namespace rude::detail::channel {
-   using RecvHandler = std::function<void(std::error_code, std::size_t)>;
+   /// Stored receive completion. move_only_function so move-only Asio handlers
+   /// (use_awaitable, deferred) can be parked until a message arrives.
+   using RecvHandler = std::move_only_function<void(boost::system::error_code, std::size_t)>;
 
    struct PendingRecv {
       boost::asio::mutable_buffer buf;
@@ -67,6 +69,49 @@ namespace rude::detail::channel {
 
       pendingRecv = PendingRecv{buf, std::move(handler)};
    }
+
+   /**
+    * @brief Per-channel receive queue.
+    *
+    * Buffers delivered messages, parks at most one pending receive, and after
+    * close() completes every receive immediately with the close reason.
+    */
+   class RecvQueue {
+   public:
+      void asyncRecv(boost::asio::mutable_buffer buf, RecvHandler handler) {
+         if (queuedMessages_.empty() && closed_) {
+            handler(closeReason_, 0);
+            return;
+         }
+
+         channel::asyncRecv(queuedMessages_, pendingRecv_, buf, std::move(handler));
+      }
+
+      void deliver(std::span<std::byte const> payload) {
+         deliverOrQueue(queuedMessages_, pendingRecv_, payload);
+      }
+
+      /// Fail the parked receive (if any) and make future receives fail once
+      /// buffered messages are drained.
+      void close(boost::system::error_code reason) {
+         closed_ = true;
+         closeReason_ = reason;
+         if (pendingRecv_) {
+            auto recv = std::exchange(pendingRecv_, std::nullopt);
+            recv->handler(reason, 0);
+         }
+      }
+
+      [[nodiscard]] bool closed() const noexcept {
+         return closed_;
+      }
+
+   private:
+      std::deque<ReceivedMessage> queuedMessages_;
+      std::optional<PendingRecv> pendingRecv_;
+      bool closed_ = false;
+      boost::system::error_code closeReason_;
+   };
 
    inline bool isNewerSequence(std::uint16_t sequenceNumber, std::uint16_t previousSequenceNumber) noexcept {
       const auto delta = static_cast<std::uint16_t>(sequenceNumber - previousSequenceNumber);
@@ -137,12 +182,12 @@ namespace rude::detail::channel {
       return (ackBits & (1U << (backDelta - 1U))) != 0;
    }
 
-   template <typename Sock>
+   template <typename Sock, typename Handler>
    void sendEncoded(Sock& sock, boost::asio::ip::udp::endpoint const& remoteEndpoint, std::vector<std::byte> encodedPacket,
-                    std::function<void(std::error_code)> handler) {
+                    Handler handler) {
       auto buffer = std::make_shared<std::vector<std::byte>>(std::move(encodedPacket));
       sock.asyncSendTo(boost::asio::buffer(*buffer), remoteEndpoint,
-                       [buffer, handler = std::move(handler)](std::error_code ec, std::size_t) mutable {
+                       [buffer, handler = std::move(handler)](boost::system::error_code ec, std::size_t) mutable {
                           handler(ec);
                        });
    }

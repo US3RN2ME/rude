@@ -4,6 +4,8 @@
 #include <atomic>
 #include <boost/asio/buffer.hpp>
 #include <boost/asio/ip/udp.hpp>
+#include <boost/system/error_code.hpp>
+#include <chrono>
 #include <cstdint>
 #include <deque>
 #include <functional>
@@ -16,7 +18,6 @@
 #include <rude/session/ChannelConfig.hpp>
 #include <rude/session/SocketStats.hpp>
 #include <span>
-#include <system_error>
 #include <vector>
 
 namespace rude {
@@ -31,15 +32,16 @@ namespace rude {
    class UnreliableChannel {
    public:
       using RecvHandler = detail::channel::RecvHandler;
+      using Clock = std::chrono::steady_clock;
 
       explicit UnreliableChannel(UnreliableChannelConfig const& cfg) noexcept
           : id_{cfg.id_} {}
 
       UnreliableChannel() = default;
 
-      template <PacketCodec Codec, Socket Sock>
+      template <PacketCodec Codec, Socket Sock, typename Handler>
       void asyncSend(std::span<std::byte const> payload, Sock& sock, boost::asio::ip::udp::endpoint const& remoteEndpoint,
-                     Codec& codec, SocketStats& stats, std::function<void(std::error_code)> handler) {
+                     Codec& codec, SocketStats& stats, Handler handler) {
          Packet packet;
          packet.type_ = PacketType::Data;
          packet.seq_ = nextSeq_++;
@@ -62,7 +64,16 @@ namespace rude {
       }
 
       void asyncRecv(boost::asio::mutable_buffer buf, RecvHandler handler) {
-         detail::channel::asyncRecv(queuedMessages_, pendingRecv_, buf, std::move(handler));
+         recvQueue_.asyncRecv(buf, std::move(handler));
+      }
+
+      /// Unreliable channels never retransmit.
+      template <Socket Sock>
+      void onTick(Clock::time_point, Sock&, boost::asio::ip::udp::endpoint const&, SocketStats&) noexcept {}
+
+      /// Fail the parked receive and all future receives with reason.
+      void close(boost::system::error_code reason) {
+         recvQueue_.close(reason);
       }
 
       void onRecv(Packet const& packet, SocketStats& stats) {
@@ -80,11 +91,11 @@ namespace rude {
          stats.packetsRecv_.fetch_add(1, std::memory_order_relaxed);
          stats.bytesRecv_.fetch_add(packet.payload_.size(), std::memory_order_relaxed);
 
-         detail::channel::deliverOrQueue(queuedMessages_, pendingRecv_, packet.payload_);
+         recvQueue_.deliver(packet.payload_);
       }
 
       template <PacketCodec Codec, Socket Sock>
-      void flush(Sock&, boost::asio::ip::udp::endpoint const&, Codec&, std::error_code&) noexcept {}
+      void flush(Sock&, boost::asio::ip::udp::endpoint const&, Codec&, boost::system::error_code&) noexcept {}
 
       [[nodiscard]] std::optional<Packet> buildAck() const noexcept {
          return std::nullopt;
@@ -95,8 +106,7 @@ namespace rude {
       std::uint16_t nextSeq_ = 0;
       std::uint16_t lastSeq_ = 0;
       bool hasDelivered_ = false;
-      std::deque<detail::channel::ReceivedMessage> queuedMessages_;
-      std::optional<detail::channel::PendingRecv> pendingRecv_;
+      detail::channel::RecvQueue recvQueue_;
    };
 
 } // namespace rude

@@ -4,6 +4,8 @@
 
 #include <cstddef>
 #include <cstdint>
+#include <rude/session/ChannelConfig.hpp>
+#include <vector>
 
 namespace rude {
 
@@ -40,6 +42,10 @@ namespace rude {
 
       /// Receive buffer size allocated inside UdpSocket (bytes).
       std::size_t recvBufSize_ = 65'536;
+
+      /// Channels opened when the session starts. Both peers must configure the
+      /// same channel ids and modes. Defaults to one reliable ordered channel 0.
+      std::vector<ChannelConfig> channels_ = {ChannelConfig::reliableOrdered(0)};
    };
 
 } // namespace rude

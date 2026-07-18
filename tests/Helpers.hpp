@@ -17,7 +17,7 @@ namespace rude::test {
    struct MockSocket {
       std::vector<std::byte> lastSend;
       std::size_t sends = 0;
-      std::error_code sendError;
+      boost::system::error_code sendError;
       boost::asio::ip::udp::endpoint lastEndpoint;
 
       template <typename Handler>
