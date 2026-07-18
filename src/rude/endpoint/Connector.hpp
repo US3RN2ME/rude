@@ -2,7 +2,9 @@
 #ifndef RUDE_ENDPOINT_CONNECTOR_HPP
 #define RUDE_ENDPOINT_CONNECTOR_HPP
 
+#include <boost/asio/async_result.hpp>
 #include <boost/asio/ip/udp.hpp>
+#include <boost/system/error_code.hpp>
 #include <memory>
 #include <rude/concepts/CongestionControl.hpp>
 #include <rude/concepts/PacketCodec.hpp>
@@ -10,11 +12,12 @@
 #include <rude/concepts/Socket.hpp>
 #include <rude/core/Executor.hpp>
 #include <rude/detail/DefaultCodec.hpp>
+#include <rude/detail/Handshake.hpp>
 #include <rude/detail/UdpSocket.hpp>
 #include <rude/detail/congestion/LeakyBucket.hpp>
-#include <rude/detail/handshake.hpp>
 #include <rude/session/BasicSession.hpp>
 #include <rude/session/SessionConfig.hpp>
+#include <utility>
 
 namespace rude {
 
@@ -24,29 +27,35 @@ namespace rude {
    ///   Connector connector{executor};
    ///   auto session = co_await connector.asyncConnect(
    ///      {address::from_string("127.0.0.1"), 9000}, asio::use_awaitable);
+   ///   co_await session->asyncSend(0, payload, asio::use_awaitable);
    template <PacketCodec Codec = DefaultCodec, CongestionCtrl OrderedCC = LeakyBucket, CongestionCtrl UnorderedCC = LeakyBucket,
              SessionPolicy Policy = DefaultPolicy, Socket Sock = UdpSocket>
    class BasicConnector {
    public:
       using SessionType = BasicSession<Codec, OrderedCC, UnorderedCC, Policy, Sock>;
+      using SessionPtr = std::shared_ptr<SessionType>;
 
       explicit BasicConnector(Executor executor)
           : executor_{std::move(executor)} {}
 
-      /// Connect to remote. Completes with the new Session on success.
-      /// Completion signature: void(std::error_code, SessionType).
-      template <boost::asio::completion_token_for<void(std::error_code, SessionType)> Token>
+      /// Connect to remote. Completes with a started session on success.
+      /// Completion signature: void(boost::system::error_code, SessionPtr).
+      template <boost::asio::completion_token_for<void(boost::system::error_code, SessionPtr)> Token>
       auto asyncConnect(boost::asio::ip::udp::endpoint remote, Token&& token) {
-         return boost::asio::async_initiate<Token, void(std::error_code, SessionType)>(
+         return boost::asio::async_initiate<Token, void(boost::system::error_code, SessionPtr)>(
              [this, remote](auto handler) {
-                auto sock = std::make_shared<Sock>(executor_, boost::asio::ip::udp::endpoint{boost::asio::ip::udp::v4(), 0});
+                auto session = SessionType::create(executor_, remote.protocol(), codec_, policy_, config_);
+                pending_ = session;
                 detail::Handshake::asyncClientHandshake(
-                    *sock, remote, codec_, config_, [this, remote, sock, h = std::move(handler)](std::error_code ec) mutable {
+                    session->socket(), remote, codec_, config_, Executor{session->strand()},
+                    [session, h = std::move(handler)](boost::system::error_code ec,
+                                                      boost::asio::ip::udp::endpoint adopted) mutable {
                        if (ec) {
-                          h(ec, SessionType{});
+                          std::move(h)(ec, SessionPtr{});
                           return;
                        }
-                       h(ec, SessionType{executor_, std::move(*sock), codec_, policy_, config_, remote});
+                       session->start(adopted);
+                       std::move(h)(boost::system::error_code{}, session);
                     });
              },
              token);
@@ -55,7 +64,7 @@ namespace rude {
       // ── Fluent configuration ──────────────────────────────────────────────────
 
       BasicConnector& withConfig(SessionConfig cfg) {
-         config_ = cfg;
+         config_ = std::move(cfg);
          return *this;
       }
       BasicConnector& withCodec(Codec codec) {
@@ -67,13 +76,19 @@ namespace rude {
          return *this;
       }
 
-      void cancel() { /* cancel pending asyncConnect via stored socket */ }
+      /// Abort an in-flight asyncConnect (its handler completes with an error).
+      void cancel() {
+         if (auto session = pending_.lock()) {
+            session->cancel();
+         }
+      }
 
    private:
       Executor executor_;
       Codec codec_{};
       Policy policy_{};
       SessionConfig config_{};
+      std::weak_ptr<SessionType> pending_;
    };
 
    // ── Default alias ──────────────────────────────────────────────────────────────

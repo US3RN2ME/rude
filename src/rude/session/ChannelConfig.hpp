@@ -9,9 +9,10 @@ namespace rude {
    /**
     * @brief Delivery profile selected for a session channel.
     *
-    * The mode selects the concrete channel implementation used by
-    * BasicSession::setChannel(). Concrete channel classes do not accept this
-    * enum because their C++ type already defines the delivery contract.
+    * The mode selects the concrete channel implementation a session opens for
+    * each SessionConfig::channels_ entry. Concrete channel classes do not
+    * accept this enum because their C++ type already defines the delivery
+    * contract.
     */
    enum class ChannelMode : std::uint8_t {
       ReliableOrdered,

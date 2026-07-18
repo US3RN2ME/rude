@@ -10,6 +10,8 @@
 #include <rude/detail/congestion/BbrLite.hpp>
 #include <rude/detail/congestion/LeakyBucket.hpp>
 #include <rude/detail/congestion/Null.hpp>
+#include <rude/endpoint/Acceptor.hpp>
+#include <rude/endpoint/Connector.hpp>
 #include <rude/protocol/Packet.hpp>
 #include <rude/protocol/Types.hpp>
 #include <rude/session/BasicSession.hpp>

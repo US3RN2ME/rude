@@ -2,7 +2,10 @@
 #ifndef RUDE_CORE_ERROR_HPP
 #define RUDE_CORE_ERROR_HPP
 
-#include <system_error>
+#include <boost/system/error_category.hpp>
+#include <boost/system/error_code.hpp>
+#include <string>
+#include <type_traits>
 
 namespace rude {
 
@@ -20,16 +23,19 @@ namespace rude {
       SendWindowFull = 4,  ///< Reliable channel send window exhausted
       ChannelClosed = 5,   ///< Operation on a channel that has been shut down
       VersionMismatch = 6, ///< Peer's codec version != our version()
+      MessageTooLarge = 7, ///< Payload + codec overhead exceeds the session MTU
    };
 
    /**
-    * @brief std::error_category implementation for rude errors.
+    * @brief Error category implementation for rude errors.
     *
-    * Users normally do not construct this type
-    * directly; call rudpCategory()
+    * Codes are boost::system::error_code so they slot natively into Boost.Asio
+    * completion signatures (co_await unwrapping, exceptions); they convert
+    * implicitly to std::error_code wherever the standard type is expected.
+    * Users normally do not construct this type directly; call rudpCategory()
     * or makeErrorCode() instead.
     */
-   struct RudpCategory : std::error_category {
+   struct RudpCategory : boost::system::error_category {
       [[nodiscard]] const char* name() const noexcept override {
          return "rude";
       }
@@ -48,6 +54,8 @@ namespace rude {
                return "channel closed";
             case Error::VersionMismatch:
                return "codec version mismatch";
+            case Error::MessageTooLarge:
+               return "message exceeds session mtu";
             default:
                return "unknown rude error";
          }
@@ -60,27 +68,31 @@ namespace rude {
     * @return Stable process-local error category
     * instance.
     */
-   inline const std::error_category& rudpCategory() noexcept {
+   inline const boost::system::error_category& rudpCategory() noexcept {
       static RudpCategory instance;
       return instance;
    }
 
    /**
-    * @brief Converts a rude error enum to std::error_code.
+    * @brief Converts a rude error enum to an error code.
     *
     * @param e
     * Library error condition.
     *
-
-    * * @return std::error_code bound to the rude category.
+    * @return boost::system::error_code bound to the rude category.
     */
-   inline std::error_code makeErrorCode(Error e) noexcept {
+   inline boost::system::error_code makeErrorCode(Error e) noexcept {
       return {static_cast<int>(e), rudpCategory()};
+   }
+
+   /// Enables implicit conversion of rude::Error to boost::system::error_code.
+   inline boost::system::error_code make_error_code(Error e) noexcept {
+      return makeErrorCode(e);
    }
 
 } // namespace rude
 
 template <>
-struct std::is_error_code_enum<rude::Error> : std::true_type {};
+struct boost::system::is_error_code_enum<rude::Error> : std::true_type {};
 
 #endif // RUDE_CORE_ERROR_HPP

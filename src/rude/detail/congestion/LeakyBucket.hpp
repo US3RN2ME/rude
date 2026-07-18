@@ -76,9 +76,12 @@ namespace rude {
          lastTick_ = now;
       }
 
+      // peakRate_ and burst_ are set only at construction, but must not be
+      // const: const members delete assignment, and channels holding this
+      // controller are stored in a std::variant that requires it.
       double rate_;
-      double const peakRate_;
-      double const burst_;
+      double peakRate_;
+      double burst_;
       double tokens_;
       Clock::time_point lastTick_;
       std::chrono::microseconds smoothedRtt_{0};
